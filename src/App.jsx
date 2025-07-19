@@ -11,6 +11,7 @@ import Events from './pages/Events';
 import Contact from './pages/Contact';
 import AdminLogin from './pages/AdminLogin';
 import Dashboard from './pages/Dashboard';
+import PraiseSongs from "./pages/PraiseSongs";
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/admin-login" element={<AdminLogin />} /> {/* ✅ Fixed */}
          <Route path="/dashboard" element={<Dashboard />} />
+           <Route path="/praise" element={<PraiseSongs />} />
       </Routes>
     </div>
   );

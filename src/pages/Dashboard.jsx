@@ -1,13 +1,52 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from '../supabase';
+import { supabase } from "../supabase";
 
-import { FaUpload, FaBell, FaDollarSign, FaVideo, FaImage } from "react-icons/fa";
+import {
+  FaUpload,
+  FaBell,
+  FaDollarSign,
+  FaVideo,
+  FaImage,
+  FaMusic,
+  FaPrayingHands,
+} from "react-icons/fa";
 
 function LoadingSpinner() {
   return (
-    <div className="flex justify-center items-center">
-      <div className="w-10 h-10 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+    <div className="flex justify-center items-center space-x-4 py-4">
+      <div className="relative w-10 h-10">
+        {/* Spinning circle */}
+        <svg
+          className="animate-spin text-yellow-400"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={3}
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8z"
+          />
+        </svg>
+
+        {/* Centered praying hands icon */}
+        <FaPrayingHands
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-yellow-400"
+          size={28}
+        />
+      </div>
+      <span className="text-yellow-400 font-semibold text-lg">Loading...</span>
     </div>
   );
 }
@@ -15,11 +54,13 @@ function LoadingSpinner() {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+
   const [actionLoading, setActionLoading] = useState({
-    sermon: false,        // fixed keys to match usage
+    sermon: false,
     event: false,
     notification: false,
     giving: false,
+    praiseSong: false,
   });
 
   const [form, setForm] = useState({
@@ -30,13 +71,17 @@ export default function AdminDashboard() {
     notificationText: "",
     ecoCashNumber: "",
     visaInstructions: "",
-    inbucksDetails: ""
+    inbucksDetails: "",
+    praiseSongTitle: "",
+    praiseSongAudio: null,
   });
 
   const [user, setUser] = useState(null);
   const [sermons, setSermons] = useState([]);
   const [events, setEvents] = useState([]);
+  const [praiseSongs, setPraiseSongs] = useState([]);
 
+  // Fetch user + sermons, events, praise songs
   useEffect(() => {
     const getUserAndData = async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -46,143 +91,181 @@ export default function AdminDashboard() {
       }
       setUser(data.user);
 
-      let { data: sermonsData, error: sermonsError } = await supabase
-        .from("sermons")
-        .select()
-        .order("created_at", { ascending: false });
-      if (!sermonsError) setSermons(sermonsData);
+      const [{ data: sermonsData }, { data: eventsData }, { data: songsData }] =
+        await Promise.all([
+          supabase.from("sermons").select().order("created_at", { ascending: false }),
+          supabase.from("events").select().order("created_at", { ascending: false }),
+          supabase.from("praise_songs").select().order("created_at", { ascending: false }),
+        ]);
 
-      let { data: eventsData, error: eventsError } = await supabase
-        .from("events")
-        .select()
-        .order("created_at", { ascending: false });
-      if (!eventsError) setEvents(eventsData);
-
+      setSermons(sermonsData || []);
+      setEvents(eventsData || []);
+      setPraiseSongs(songsData || []);
       setLoading(false);
     };
     getUserAndData();
   }, [navigate]);
 
   const handleFileChange = (e, field) => {
-    setForm({ ...form, [field]: e.target.files[0] });
+    setForm((prev) => ({ ...prev, [field]: e.target.files[0] }));
   };
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   // Upload Sermon
   const uploadSermon = async () => {
-    if (!form.sermonTitle || !form.sermonVideo) return alert("Fill all sermon fields");
+    if (!form.sermonTitle || !form.sermonVideo) {
+      alert("Fill all sermon fields");
+      return;
+    }
     try {
-      setActionLoading(prev => ({ ...prev, sermon: true }));
-
-      // Bucket name: 'sermons' (matches Sermons page bucket)
+      setActionLoading((prev) => ({ ...prev, sermon: true }));
       const fileName = `${Date.now()}_${form.sermonVideo.name}`;
       const { data, error } = await supabase.storage.from("sermons").upload(fileName, form.sermonVideo);
       if (error) throw error;
 
-      const { data: insertData, error: insertError } = await supabase.from("sermons").insert([
-        { title: form.sermonTitle, video_url: data.path }
+      const { error: insertError } = await supabase.from("sermons").insert([
+        { title: form.sermonTitle, video_url: data.path },
       ]);
       if (insertError) throw insertError;
 
       alert("Sermon uploaded!");
 
-      // Refresh sermons list
       const { data: sermonsData } = await supabase.from("sermons").select().order("created_at", { ascending: false });
       setSermons(sermonsData);
 
-      // Clear sermon inputs
-      setForm(prev => ({ ...prev, sermonTitle: "", sermonVideo: null }));
+      setForm((prev) => ({ ...prev, sermonTitle: "", sermonVideo: null }));
     } catch (error) {
       alert(error.message);
     } finally {
-      setActionLoading(prev => ({ ...prev, sermon: false }));
+      setActionLoading((prev) => ({ ...prev, sermon: false }));
     }
   };
 
   // Upload Event
   const uploadEvent = async () => {
-    if (!form.eventTitle || !form.eventImage) return alert("Fill all event fields");
+    if (!form.eventTitle || !form.eventImage) {
+      alert("Fill all event fields");
+      return;
+    }
     try {
-      setActionLoading(prev => ({ ...prev, event: true }));
+      setActionLoading((prev) => ({ ...prev, event: true }));
 
-      // Bucket name: 'events'
       const fileName = `${Date.now()}_${form.eventImage.name}`;
       const { data, error } = await supabase.storage.from("events").upload(fileName, form.eventImage);
       if (error) throw error;
 
       const { error: insertError } = await supabase.from("events").insert([
-        { title: form.eventTitle, image_url: data.path }
+        { title: form.eventTitle, image_url: data.path },
       ]);
       if (insertError) throw insertError;
 
       alert("Event uploaded!");
 
-      // Refresh events list
       const { data: eventsData } = await supabase.from("events").select().order("created_at", { ascending: false });
       setEvents(eventsData);
 
-      // Clear event inputs
-      setForm(prev => ({ ...prev, eventTitle: "", eventImage: null }));
+      setForm((prev) => ({ ...prev, eventTitle: "", eventImage: null }));
     } catch (error) {
       alert(error.message);
     } finally {
-      setActionLoading(prev => ({ ...prev, event: false }));
+      setActionLoading((prev) => ({ ...prev, event: false }));
     }
   };
 
   // Send Notification
   const sendNotification = async () => {
-    if (!form.notificationText) return alert("Write a message");
+    if (!form.notificationText) {
+      alert("Write a message");
+      return;
+    }
     try {
-      setActionLoading(prev => ({ ...prev, notification: true }));
+      setActionLoading((prev) => ({ ...prev, notification: true }));
+
       const { error } = await supabase.from("notifications").insert([{ message: form.notificationText }]);
       if (error) throw error;
+
       alert("Notification sent!");
-      setForm(prev => ({ ...prev, notificationText: "" }));
+      setForm((prev) => ({ ...prev, notificationText: "" }));
     } catch (error) {
       alert(error.message);
     } finally {
-      setActionLoading(prev => ({ ...prev, notification: false }));
+      setActionLoading((prev) => ({ ...prev, notification: false }));
     }
   };
 
   // Update Giving Info
   const updateGiveDetails = async () => {
     try {
-      setActionLoading(prev => ({ ...prev, giving: true }));
+      setActionLoading((prev) => ({ ...prev, giving: true }));
+
       const { error } = await supabase.from("give_details").upsert({
         id: 1,
         eco_cash: form.ecoCashNumber,
         visa: form.visaInstructions,
-        inbucks: form.inbucksDetails
+        inbucks: form.inbucksDetails,
       });
       if (error) throw error;
+
       alert("Giving information updated!");
-      setForm(prev => ({ ...prev, ecoCashNumber: "", visaInstructions: "", inbucksDetails: "" }));
+      setForm((prev) => ({ ...prev, ecoCashNumber: "", visaInstructions: "", inbucksDetails: "" }));
     } catch (error) {
       alert(error.message);
     } finally {
-      setActionLoading(prev => ({ ...prev, giving: false }));
+      setActionLoading((prev) => ({ ...prev, giving: false }));
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 text-white">
-      <LoadingSpinner />
-    </div>
-  );
+  // Upload Praise Song (audio only)
+  const uploadPraiseSong = async () => {
+    if (!form.praiseSongTitle || !form.praiseSongAudio) {
+      alert("Fill all praise song fields");
+      return;
+    }
+    try {
+      setActionLoading((prev) => ({ ...prev, praiseSong: true }));
+
+      const fileExt = form.praiseSongAudio.name.split(".").pop();
+      const fileName = `${Date.now()}_${form.praiseSongTitle.trim().replace(/\s+/g, "_")}.${fileExt}`;
+
+      const { data, error } = await supabase.storage.from("praise_songs").upload(fileName, form.praiseSongAudio);
+      if (error) throw error;
+
+      const { error: insertError } = await supabase.from("praise_songs").insert([
+        { title: form.praiseSongTitle.trim(), file_path: data.path },
+      ]);
+      if (insertError) throw insertError;
+
+      alert("Praise song uploaded!");
+
+      const { data: songsData } = await supabase.from("praise_songs").select().order("created_at", { ascending: false });
+      setPraiseSongs(songsData);
+
+      setForm((prev) => ({ ...prev, praiseSongTitle: "", praiseSongAudio: null }));
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setActionLoading((prev) => ({ ...prev, praiseSong: false }));
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-950 text-white">
+        <LoadingSpinner />
+      </div>
+    );
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8">
+    <div className="min-h-screen bg-gray-950 text-white p-8 max-w-5xl mx-auto space-y-16">
       <h1 className="text-4xl text-purple-400 font-bold mb-10 border-b pb-4 border-gray-600">
         Admin Dashboard
       </h1>
 
       {/* Upload Sermon */}
-      <section className="mb-10">
+      <section>
         <h2 className="text-2xl font-semibold mb-4 text-yellow-300 flex items-center gap-2">
           <FaVideo /> Upload Sermon
         </h2>
@@ -211,7 +294,6 @@ export default function AdminDashboard() {
           {actionLoading.sermon ? "Uploading..." : "Upload Sermon"}
         </button>
 
-        {/* Show recent sermons */}
         {sermons.length > 0 && (
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-2">Recent Sermons</h3>
@@ -235,7 +317,7 @@ export default function AdminDashboard() {
       </section>
 
       {/* Upload Event */}
-      <section className="mb-10">
+      <section>
         <h2 className="text-2xl font-semibold mb-4 text-green-300 flex items-center gap-2">
           <FaImage /> Upload Event Photo
         </h2>
@@ -264,7 +346,6 @@ export default function AdminDashboard() {
           {actionLoading.event ? "Uploading..." : "Upload Event"}
         </button>
 
-        {/* Show recent events */}
         {events.length > 0 && (
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-2">Recent Events</h3>
@@ -287,8 +368,67 @@ export default function AdminDashboard() {
         )}
       </section>
 
+      {/* Upload Praise Songs */}
+      <section>
+        <h2 className="text-2xl font-semibold mb-4 text-purple-300 flex items-center gap-2">
+          <FaMusic /> Upload Praise Song
+        </h2>
+        <input
+          type="text"
+          name="praiseSongTitle"
+          placeholder="Song Title"
+          onChange={handleChange}
+          value={form.praiseSongTitle}
+          className="input"
+          disabled={actionLoading.praiseSong}
+        />
+        <input
+          type="file"
+          accept="audio/*"
+          onChange={(e) => handleFileChange(e, "praiseSongAudio")}
+          className="input mt-2"
+          disabled={actionLoading.praiseSong}
+        />
+        <button
+          onClick={uploadPraiseSong}
+          disabled={actionLoading.praiseSong}
+          className="btn mt-2 flex items-center gap-2 justify-center"
+        >
+          {actionLoading.praiseSong ? <LoadingSpinner /> : <FaUpload />}
+          {actionLoading.praiseSong ? "Uploading..." : "Upload Praise Song"}
+        </button>
+
+        {praiseSongs.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-2">Recent Praise Songs</h3>
+            <ul className="space-y-2 max-h-48 overflow-y-auto">
+              {praiseSongs.map(({ id, title, file_path }) => {
+                const url = supabase.storage.from("praise_songs").getPublicUrl(file_path).data.publicUrl;
+                return (
+                  <li key={id} className="bg-purple-800 p-3 rounded flex items-center justify-between">
+                    <span>{title}</span>
+                    <audio controls className="max-w-xs">
+                      <source src={url} />
+                      Your browser does not support the audio element.
+                    </audio>
+                    <a
+                      href={url}
+                      download
+                      className="text-yellow-400 underline ml-4"
+                      title={`Download ${title}`}
+                    >
+                      Download
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </section>
+
       {/* Notifications */}
-      <section className="mb-10">
+      <section>
         <h2 className="text-2xl font-semibold mb-4 text-pink-300 flex items-center gap-2">
           <FaBell /> Send Notification
         </h2>
@@ -311,7 +451,7 @@ export default function AdminDashboard() {
       </section>
 
       {/* Giving Info */}
-      <section className="mb-10">
+      <section>
         <h2 className="text-2xl font-semibold mb-4 text-blue-300 flex items-center gap-2">
           <FaDollarSign /> Update Giving Info
         </h2>

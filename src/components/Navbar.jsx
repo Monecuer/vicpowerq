@@ -9,7 +9,7 @@ import {
   FaMicrophoneAlt,
   FaCalendarAlt,
   FaEnvelope,
-  FaMusic
+  FaMusic,
 } from "react-icons/fa";
 
 import { supabase } from "../supabase";
@@ -37,7 +37,10 @@ export default function Navbar() {
       <div className="absolute inset-0 h-[60px] w-full bg-gradient-to-r from-purple-800 via-purple-600 to-purple-800 opacity-30 blur-xl z-[-1]" />
 
       {/* Navbar */}
-      <header className="fixed top-0 left-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-purple-800" style={{ height: "48px" }}>
+      <header
+        className="fixed top-0 left-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-purple-800"
+        style={{ height: "48px" }}
+      >
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-full">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
@@ -93,13 +96,15 @@ export default function Navbar() {
               </Link>
             ))}
 
-            {/* 🔔 Africa Praise Coming Soon Button */}
-            <button
+            {/* Africa Praise Link */}
+            <Link
+              to="/praise"
               className="mt-2 md:mt-0 animate-pulse bg-gradient-to-r from-purple-700 to-pink-600 hover:opacity-90 text-white text-xs md:text-sm px-3 py-2 rounded flex items-center gap-1 transition"
-              disabled
+              onClick={() => setMenuOpen(false)}
+              title="Go to Africa Praise Songs"
             >
-              <FaMusic /> Africa Praise Coming Soon
-            </button>
+              <FaMusic /> Africa Praise
+            </Link>
 
             {/* Admin Login */}
             <Link

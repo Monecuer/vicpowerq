@@ -1,0 +1,59 @@
+/* src/App.css */
+/* Reset some default styles */
+@import "tailwindcss";
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Body and root */
+body, #root {
+  @apply bg-gray-900 text-white min-h-screen font-sans;
+}
+
+/* Links */
+a {
+  @apply text-purple-400 hover:text-purple-600 transition-colors duration-300;
+  text-decoration: none;
+}
+
+/* Navbar */
+nav {
+  @apply bg-gray-800 shadow-md;
+}
+
+nav a.active {
+  @apply text-purple-500 font-semibold;
+}
+
+/* Buttons */
+button {
+  @apply bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded transition-colors duration-300;
+  cursor: pointer;
+}
+
+/* Form inputs */
+input, select, textarea {
+  @apply bg-gray-800 text-white border border-gray-700 rounded py-2 px-3 focus:outline-none focus:ring-2 focus:ring-purple-500;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  @apply font-extrabold text-purple-400;
+}
+
+/* Footer */
+footer {
+  @apply text-gray-400 text-sm text-center p-4;
+}
+
+/* Responsive container */
+.container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Utility classes for layout */
+.flex-center {
+  @apply flex items-center justify-center;
+}

@@ -1,0 +1,1 @@
+export default function DonationModal() { return <div>Donation Modal</div>; }
